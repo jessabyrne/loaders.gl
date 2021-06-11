@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
 // import {ZstdDeflateTransform, ZstdInflateTransform} from '@loaders.gl/compression';
-import {ZstdWorker} from '@loaders.gl/compression';
+import {CompressionWorker} from '@loaders.gl/compression';
 import {processOnWorker, isBrowser} from '@loaders.gl/worker-utils';
 // import {generateRandomArrayBufferreArrayBuffers} from '../utils/test-utils';
 import {getData, compareArrayBuffers} from './utils/test-utils';
@@ -29,7 +29,7 @@ test('lz4#defaults', async t => {
 
 // WORKER TESTS
 
-test('zstd#worker', async (t) => {
+test.skip('zstd#worker', async (t) => {
   if (!isBrowser) {
     t.end();
     return;
@@ -39,14 +39,16 @@ test('zstd#worker', async (t) => {
 
   t.equal(binaryData.byteLength, 100000, 'Length correct');
 
-  const deflatedData = await processOnWorker(ZstdWorker, binaryData.slice(0), {
+  const deflatedData = await processOnWorker(CompressionWorker, binaryData.slice(0), {
+    compression: 'Zstandard',
     operation: 'deflate',
     _workerType: 'test'
   });
 
   t.equal(deflatedData.byteLength, 11936, 'Length correct');
 
-  const inflatedData = await processOnWorker(ZstdWorker, deflatedData, {
+  const inflatedData = await processOnWorker(CompressionWorker, deflatedData, {
+    compression: 'Zstandard',
     operation: 'inflate',
     _workerType: 'test'
   });
