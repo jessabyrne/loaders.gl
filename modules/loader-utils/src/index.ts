@@ -36,7 +36,6 @@ export {makeTransformIterator} from './lib/iterator-utils/make-transform-iterato
 export {parseJSON} from './lib/parser-utils/parse-json';
 
 // MEMORY COPY UTILS
-export {isBuffer, toBuffer, bufferToArrayBuffer} from './lib/binary-utils/buffer-utils';
 export {
   toArrayBuffer,
   sliceArrayBuffer,
@@ -56,12 +55,6 @@ export {
 } from './lib/binary-utils/encode-utils';
 export {getFirstCharacters, getMagicString} from './lib/binary-utils/get-first-characters';
 
-// PATH UTILS
-import * as path from './lib/path-utils/path';
-export {path};
-export {setPathPrefix, getPathPrefix, resolvePath} from './lib/path-utils/file-aliases';
-export {addAliases as _addAliases} from './lib/path-utils/file-aliases';
-
 // ITERATOR UTILS
 export {
   makeTextEncoderIterator,
@@ -73,6 +66,18 @@ export {forEach, concatenateArrayBuffersAsync} from './lib/iterator-utils/async-
 
 // REQUEST UTILS
 export {default as RequestScheduler} from './lib/request-utils/request-scheduler';
+
+// NODE `path`` REPLACEMENT
+import * as path from './lib/path-utils/path';
+export {path};
+export {setPathPrefix, getPathPrefix, resolvePath} from './lib/path-utils/file-aliases';
+export {addAliases as _addAliases} from './lib/path-utils/file-aliases';
+
+// NODE `fs` WRAPPERS
+export * as fs from './lib/node/fs';
+
+// NODE `buffer` WRAPPERS
+export {isBuffer, toBuffer, bufferToArrayBuffer} from './lib/binary-utils/buffer-utils';
 
 // MESH CATEGORY UTILS
 // Note: Should move to category specific module if code size increases
