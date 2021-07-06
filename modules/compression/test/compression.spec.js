@@ -1,3 +1,4 @@
+/** @typedef {import('@loaders.gl/compression').Compression} Compression */
 import test from 'tape-promise/tape';
 import {
   NoCompression,
@@ -7,67 +8,114 @@ import {
   ZstdCompression,
   SnappyCompression,
   BrotliCompression,
-  LZOCompression
+  LZOCompression,
+  CompressionWorker
 } from '@loaders.gl/compression';
-import {
-  isBrowser,
-  concatenateArrayBuffers,
-  concatenateArrayBuffersAsync
-} from '@loaders.gl/loader-utils';
-// import {processOnWorker} from '@loaders.gl/worker-utils';
+import {processOnWorker, isBrowser} from '@loaders.gl/worker-utils';
+import {concatenateArrayBuffers, concatenateArrayBuffersAsync} from '@loaders.gl/loader-utils';
 import {getData, compareArrayBuffers} from './utils/test-utils';
 
 // Import big dependencies
-import ZstdCodec from 'zstd-codec';
-// import lzo from 'lzo';
-import brotliCompress from 'brotli/compress';
-// import brotliDecompress from 'brotli/decompress';
-// import brotli from 'brotli';
-const brotli = {
-  compress: brotliCompress,
-  decompress: () => {
-    throw new Error('brotli decompress');
-  }
-};
+
+// import brotli from 'brotli'; - brotli has problems with decompress in browsers
+import brotliDecompress from 'brotli/decompress';
+import lz4js from 'lz4js';
+import lzo from 'lzo';
+import {ZstdCodec} from 'zstd-codec';
 
 // Inject large dependencies through Compression constructor options
 const modules = {
-  'zstd-codec': ZstdCodec,
-  brotli
-  // lzo
+  // brotli has problems with decompress in browsers
+  brotli: {
+    decompress: brotliDecompress,
+    compress: () => {
+      throw new Error('brotli compress');
+    }
+  },
+  lz4js,
+  lzo,
+  'zstd-codec': ZstdCodec
 };
 
+const TEST_DATA = getData();
+
+const TEST_CASES = [
+  {
+    title: 'binary',
+    data: TEST_DATA.binaryData
+  },
+  {
+    title: 'repeated',
+    data: TEST_DATA.repeatedData,
+    compression: {
+      plain: {
+        compressedLength: 100000
+      },
+      compress: {
+        compressedLength: 10903
+      },
+      gzip: {
+        compressedLength: 10915
+      },
+      lz4: {
+        compressedLength: 10422
+      },
+      snappy: {
+        compressedLength: 23764
+      },
+      zstd: {
+        compressedLength: 10025
+      }
+    }
+  }
+];
+
+/** @type {Compression[]} */
 const COMPRESSIONS = [
-  {compression: new NoCompression({modules})},
-  {compression: new GZipCompression({modules})},
-  {compression: new DeflateCompression({modules})},
-  {compression: new LZ4Compression({modules})},
-  {compression: new ZstdCompression({modules})},
-  {compression: new SnappyCompression({modules})},
-  {compression: new BrotliCompression({modules})}
+  new NoCompression({modules}),
+  new BrotliCompression({modules}),
+  new DeflateCompression({modules}),
+  new GZipCompression({modules}),
+  new LZOCompression({modules}),
+  new LZ4Compression({modules}),
+  new SnappyCompression({modules}),
+  new ZstdCompression({modules})
 ];
 
 if (!isBrowser) {
-  COMPRESSIONS.push({compression: new LZOCompression({modules})});
+  COMPRESSIONS.push();
 }
 
 test('compression#atomic', async (t) => {
-  const {binaryData, repeatedData} = getData();
-  for (const compression of [new GZipCompression({modules})]) {
-    let deflatedData = await compression.compress(binaryData);
-    let inflatedData = await compression.decompress(deflatedData);
-    t.ok(compareArrayBuffers(binaryData, inflatedData), 'deflate/inflate default options');
-
-    t.equal(repeatedData.byteLength, 100000, 'Repeated data length is correct');
-    deflatedData = await compression.compress(repeatedData);
-
-    t.equal(deflatedData.byteLength, 10915, 'Repeated data compresses well');
-    inflatedData = await compression.decompress(deflatedData);
-    t.equal(inflatedData.byteLength, 100000, 'Inflated data length is correct');
-    t.ok(compareArrayBuffers(repeatedData, inflatedData), 'deflate/inflate default options');
+  for (const compression of COMPRESSIONS) {
+    // brotli compress import issue
+    if (!compression.isSupported || compression.name === 'brotli') {
+      continue; // eslint-disable-line no-continue
+    }
+    for (const tc of TEST_CASES) {
+      const {title} = tc;
+      const {name} = compression;
+      const compressedData = await compression.compress(tc.data);
+      const compressedLength = tc.compression?.[compression.name]?.compressedLength;
+      if (compressedLength) {
+        t.equal(
+          compressedData.byteLength,
+          compressedLength,
+          `${name}(${title}) compressed length correct`
+        );
+      }
+      const uncompressedData = await compression.decompress(compressedData);
+      t.ok(
+        compareArrayBuffers(tc.data, uncompressedData),
+        `${name}(${title}) decompressed data equals original`
+      );
+    }
   }
+
   t.end();
 });
+
+// BATCHED TESTS
 
 test('compression#batched', async (t) => {
   const inputChunks = [
@@ -76,26 +124,133 @@ test('compression#batched', async (t) => {
     new Uint8Array([7, 8, 9]).buffer
   ];
 
-  for (const compression of [new GZipCompression({modules})]) {
-    // Test empty batches
-    const deflateIterator1 = compression.compressBatches(inputChunks);
-    const deflatedData = await concatenateArrayBuffersAsync(deflateIterator1);
-    t.equals(deflatedData.byteLength, 17); // Header overhead
-
-    // test chained iterators
-    const deflateIterator = compression.compressBatches(inputChunks);
-
-    const inflateIterator = compression.decompressBatches(deflateIterator);
-
-    const inflatedChunks = [];
-    for await (const chunk of inflateIterator) {
-      inflatedChunks.push(chunk);
+  for (const compression of COMPRESSIONS) {
+    // brotli compress import issue
+    if (!compression.isSupported || compression.name === 'brotli') {
+      continue; // eslint-disable-line no-continue
     }
+    for (const tc of TEST_CASES) {
+      const {title} = tc;
+      const {name} = compression;
 
-    const inputData = concatenateArrayBuffers(...inputChunks);
-    const inflatedData = concatenateArrayBuffers(...inflatedChunks);
+      // Test empty batches
+      let compressedBatches = compression.compressBatches(inputChunks);
+      const compressedData = await concatenateArrayBuffersAsync(compressedBatches);
+      if (name === 'gzip') {
+        t.equals(compressedData.byteLength, 29, `${name}(${title}) batches: length correct`); // Header overhead
+      }
 
-    t.ok(compareArrayBuffers(inputData, inflatedData), 'deflate/inflate default options');
+      // test chained iterators
+      compressedBatches = compression.compressBatches(inputChunks);
+
+      const decompressedBatches = compression.decompressBatches(compressedBatches);
+
+      const inputData = concatenateArrayBuffers(...inputChunks);
+      const decompressedData = await concatenateArrayBuffersAsync(decompressedBatches);
+
+      t.ok(
+        compareArrayBuffers(inputData, decompressedData),
+        `${name}(${title}) batches: compress/decompress identical`
+      );
+    }
   }
+  t.end();
+});
+
+// WORKER TESTS
+
+test.skip('gzip#worker', async (t) => {
+  if (!isBrowser) {
+    t.end();
+    return;
+  }
+
+  const {binaryData} = getData();
+
+  t.equal(binaryData.byteLength, 100000, 'Length correct');
+
+  const compressdData = await processOnWorker(CompressionWorker, binaryData.slice(0), {
+    compression: 'gzip',
+    operation: 'compress',
+    _workerType: 'test',
+    gzip: {
+      level: 6
+    }
+  });
+
+  t.equal(compressdData.byteLength, 12825, 'Length correct');
+
+  const decompressdData = await processOnWorker(CompressionWorker, compressdData, {
+    compression: 'gzip',
+    operation: 'decompress',
+    _workerType: 'test',
+    gzip: {
+      level: 6
+    }
+  });
+
+  t.equal(decompressdData.byteLength, 100000, 'Length correct');
+
+  t.ok(compareArrayBuffers(decompressdData, binaryData), 'compress/decompress level 6');
+  t.end();
+});
+
+test.skip('lz4#worker', async (t) => {
+  if (!isBrowser) {
+    t.end();
+    return;
+  }
+
+  const {binaryData} = getData();
+
+  t.equal(binaryData.byteLength, 100000, 'Length correct');
+
+  const compressdData = await processOnWorker(CompressionWorker, binaryData.slice(0), {
+    compression: 'lz4',
+    operation: 'compress',
+    _workerType: 'test'
+  });
+
+  t.equal(compressdData.byteLength, 12331, 'Length correct');
+
+  const decompressdData = await processOnWorker(CompressionWorker, compressdData, {
+    compression: 'lz4',
+    operation: 'decompress',
+    _workerType: 'test'
+  });
+
+  t.equal(decompressdData.byteLength, 100000, 'Length correct');
+
+  t.ok(compareArrayBuffers(decompressdData, binaryData), 'compress/decompress level 6');
+  t.end();
+});
+
+test.skip('zstd#worker', async (t) => {
+  if (!isBrowser) {
+    t.end();
+    return;
+  }
+
+  const {binaryData} = getData();
+
+  t.equal(binaryData.byteLength, 100000, 'Length correct');
+
+  const compressdData = await processOnWorker(CompressionWorker, binaryData.slice(0), {
+    compression: 'Zstandard',
+    operation: 'compress',
+    _workerType: 'test'
+  });
+
+  t.equal(compressdData.byteLength, 11936, 'Length correct');
+
+  const decompressdData = await processOnWorker(CompressionWorker, compressdData, {
+    compression: 'Zstandard',
+    operation: 'decompress',
+    _workerType: 'test'
+  });
+
+  t.equal(decompressdData.byteLength, 100000, 'Length correct');
+
+  t.ok(compareArrayBuffers(decompressdData, binaryData), 'compress/decompress level 6');
   t.end();
 });

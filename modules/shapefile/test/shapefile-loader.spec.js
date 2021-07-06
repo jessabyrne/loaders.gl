@@ -54,11 +54,7 @@ test('ShapefileLoader#load (from browser File objects)', async (t) => {
       const fileSystem = new BrowserFileSystem(fileList);
       const {fetch} = fileSystem;
       const filename = `${testFileName}.shp`;
-<<<<<<< HEAD
       // @ts-ignore
-=======
-      // @ts-expect-error
->>>>>>> feat(compression/crypto): Composable API
       const data = await load(filename, ShapefileLoader, {fetch});
       t.comment(`${filename}: ${JSON.stringify(data).slice(0, 70)}`);
 

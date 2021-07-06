@@ -7,9 +7,9 @@ import {Compression} from './compression';
  */
 export class NoCompression extends Compression {
   readonly name: string = 'plain';
-  readonly isSupported = true;
   readonly extensions: string[] = [];
   readonly contentEncodings: string[] = [];
+  readonly isSupported = true;
 
   readonly options: CompressionOptions;
 

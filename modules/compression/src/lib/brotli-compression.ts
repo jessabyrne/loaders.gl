@@ -1,14 +1,18 @@
 // BROTLI
 import type {CompressionOptions} from './compression';
 import {Compression} from './compression';
+import {isBrowser, toArrayBuffer} from '@loaders.gl/loader-utils';
 import type brotliNamespace from 'brotli';
 // import brotli from 'brotli';  // https://bundlephobia.com/package/brotli
+import zlib from 'zlib';
+import {promisify} from 'util';
 
 export type BrotliCompressionOptions = CompressionOptions & {
   brotli?: {
     mode?: number;
     quality?: number;
     lgwin?: number;
+    useZlib?: boolean;
   };
 };
 
@@ -27,9 +31,9 @@ let brotli: typeof brotliNamespace;
  */
 export class BrotliCompression extends Compression {
   readonly name: string = 'brotli';
-  readonly isSupported = true;
   readonly extensions = ['br'];
   readonly contentEncodings = ['br'];
+  readonly isSupported = true;
   readonly options: BrotliCompressionOptions;
 
   constructor(options: BrotliCompressionOptions) {
@@ -49,16 +53,26 @@ export class BrotliCompression extends Compression {
   }
 
   async compress(input: ArrayBuffer): Promise<ArrayBuffer> {
+    // On Node.js we can use built-in zlib
+    if (!isBrowser && this.options.brotli?.useZlib) {
+      const buffer = await promisify(zlib.brotliCompress)(input);
+      return toArrayBuffer(buffer);
+    }
     const brotliOptions = {...DEFAULT_BROTLI_OPTIONS.brotli, ...this.options?.brotli};
     const inputArray = new Uint8Array(input);
-    // return brotli.compress(inputArray, brotliOptions);
-    return input;
+    // @ts-ignore brotli types state that only Buffers are accepted...
+    return brotli.compress(inputArray, brotliOptions);
   }
 
   async decompress(input: ArrayBuffer): Promise<ArrayBuffer> {
+    // On Node.js we can use built-in zlib
+    if (!isBrowser && this.options.brotli?.useZlib) {
+      const buffer = await promisify(zlib.brotliDecompress)(input);
+      return toArrayBuffer(buffer);
+    }
     const brotliOptions = {...DEFAULT_BROTLI_OPTIONS.brotli, ...this.options?.brotli};
     const inputArray = new Uint8Array(input);
-    // return brotli.decompress(input, brotliOptions);
-    return input;
+    // @ts-ignore brotli types state that only Buffers are accepted...
+    return brotli.decompress(inputArray, brotliOptions);
   }
 }

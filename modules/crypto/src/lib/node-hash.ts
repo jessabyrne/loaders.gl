@@ -28,8 +28,6 @@ export class NodeHash extends Hash {
     }
   }
 
-  async preload(): Promise<void> {}
-
   /**
    * Atomic hash calculation
    * @returns base64 encoded hash

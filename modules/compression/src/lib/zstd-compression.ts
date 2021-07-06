@@ -9,10 +9,10 @@ let zstd;
  * Zstandard compression / decompression
  */
 export class ZstdCompression extends Compression {
-  readonly name: string = 'Zstandard';
-  readonly isSupported = true;
+  readonly name: string = 'zstandard';
   readonly extensions = [];
   readonly contentEncodings = [];
+  readonly isSupported = true;
   readonly options: CompressionOptions;
 
   constructor(options: CompressionOptions) {

@@ -1,7 +1,8 @@
-import type {WorkerObject} from '@loaders.gl/worker-utils';
+// import type {Worker} from '@loaders.gl/worker-utils';
 
-export type {Compression, CompressionOptions} from './lib/compression';
+export type {CompressionOptions} from './lib/compression';
 
+export {Compression} from './lib/compression';
 export {NoCompression} from './lib/no-compression';
 export {DeflateCompression} from './lib/deflate-compression';
 export {GZipCompression} from './lib/gzip-compression';
@@ -48,6 +49,6 @@ export function parseOnWorker(
 ): Promise<ArrayBuffer>;
  */
 
-// export const _typecheckZlibWorker: WorkerObject = ZlibWorker;
-// export const _typecheckLZ4Worker: WorkerObject = LZ4Worker;
-// export const _typecheckZstdWorker: WorkerObject = ZstdWorker;
+// export const _typecheckZlibWorker: Worker = ZlibWorker;
+// export const _typecheckLZ4Worker: Worker = LZ4Worker;
+// export const _typecheckZstdWorker: Worker = ZstdWorker;

@@ -12,6 +12,7 @@ export class LZ4Compression extends Compression {
   readonly name: string = 'lz4';
   readonly extensions = ['lz4'];
   readonly contentEncodings = ['x-lz4'];
+  readonly isSupported = true;
   readonly options: CompressionOptions;
 
   constructor(options: CompressionOptions) {

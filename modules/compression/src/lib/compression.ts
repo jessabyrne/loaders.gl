@@ -12,6 +12,7 @@ export abstract class Compression {
   abstract readonly name: string;
   abstract readonly extensions: string[];
   abstract readonly contentEncodings: string[];
+  abstract readonly isSupported: boolean;
 
   constructor(options?: CompressionOptions) {
     this.compressBatches = this.compressBatches.bind(this);

@@ -1,7 +1,8 @@
 // LZO
 import type {CompressionOptions} from './compression';
 import {Compression} from './compression';
-import {isBrowser} from '@loaders.gl/loader-utils';
+// import {isBrowser} from '@loaders.gl/loader-utils';
+import {toBuffer} from '@loaders.gl/loader-utils';
 // import lzo from 'lzo'; // https://bundlephobia.com/package/lzo
 
 let lzo;
@@ -13,7 +14,7 @@ export class LZOCompression extends Compression {
   readonly name = 'lzo';
   readonly extensions = [];
   readonly contentEncodings = [];
-  readonly isSupported = isBrowser;
+  readonly isSupported = false; // !isBrowser;
   readonly options: CompressionOptions;
 
   constructor(options: CompressionOptions) {
@@ -35,12 +36,14 @@ export class LZOCompression extends Compression {
   async compress(input: ArrayBuffer): Promise<ArrayBuffer> {
     await this.preload();
     // const inputArray = new Uint8Array(input);
-    return lzo.compress(input).buffer;
+    const inputBuffer = toBuffer(input);
+    return lzo.compress(inputBuffer).buffer;
   }
 
   async decompress(input: ArrayBuffer): Promise<ArrayBuffer> {
     await this.preload();
     // const inputArray = new Uint8Array(input);
-    return lzo.decompress(input).buffer;
+    const inputBuffer = toBuffer(input);
+    return lzo.decompress(inputBuffer).buffer;
   }
 }

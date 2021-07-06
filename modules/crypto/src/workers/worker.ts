@@ -12,7 +12,7 @@ createWorker(async (data, options = {}) => {
 
   switch (operation) {
     case 'crc32':
-      return await new CRC32Hash(options).hashBatches(data);
+      return await new CRC32Hash(options).hash(data);
     case 'crc32c':
       return await new CRC32CHash(options).hash(data);
     case 'md5':
