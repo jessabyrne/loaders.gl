@@ -1,3 +1,5 @@
+import * as fs  from './lib/node/fs';
+
 // TYPES
 export type {
   Loader,
@@ -74,7 +76,7 @@ export {setPathPrefix, getPathPrefix, resolvePath} from './lib/path-utils/file-a
 export {addAliases as _addAliases} from './lib/path-utils/file-aliases';
 
 // NODE `fs` WRAPPERS
-export * as fs from './lib/node/fs';
+export {fs};
 
 // NODE `buffer` WRAPPERS
 export {isBuffer, toBuffer, bufferToArrayBuffer} from './lib/binary-utils/buffer-utils';
