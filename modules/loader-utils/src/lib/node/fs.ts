@@ -26,16 +26,3 @@ export async function _readToArrayBuffer(fd: number, start: number, length: numb
   }
   return toArrayBuffer(buffer);
 }
-
-export default {
-  isSupported,
-  open,
-  close,
-  read,
-  readFile,
-  readFileSync,
-  writeFile,
-  writeFileSync,
-
-  _readToArrayBuffer
-};
