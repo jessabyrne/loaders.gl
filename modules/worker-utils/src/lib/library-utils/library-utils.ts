@@ -83,7 +83,7 @@ async function loadLibraryFromFile(libraryUrl) {
     return node.requireFromFile && (await node.requireFromFile(libraryUrl));
   }
   if (isWorker) {
-    return importScripts(libraryUrl);
+    return import(libraryUrl);
   }
   // TODO - fix - should be more secure than string parsing since observes CORS
   // if (isBrowser) {
